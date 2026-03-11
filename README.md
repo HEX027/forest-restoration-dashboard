@@ -2,139 +2,107 @@
 
 
 
-An end-to-end geospatial data platform tracking reforestation progress across pilot regions in Africa using satellite-derived land cover data, spatial databases, and an interactive analytics dashboard.
+A full-stack geospatial data platform that tracks reforestation progress across pilot regions in Africa. Built with Python, PostGIS, and Streamlit — from raw satellite data ingestion through to an interactive analytics dashboard.
 
 
 
-\## Project Overview
+> MPS Data Science · University of Maryland Baltimore County (UMBC)
 
+> Built by Amisha Ganvir · github.com/HEX027
 
 
-This project builds a full data pipeline for monitoring forest restoration initiatives across 5 pilot regions in West and East Africa (Burkina Faso, Kenya, Ethiopia, Ghana, Tanzania). It ingests satellite imagery metadata, processes geospatial raster and vector data, validates data quality automatically, stores spatial features in a PostGIS database, and serves insights through a professional Streamlit dashboard.
 
+---
 
 
-Built as part of MPS Data Science coursework at UMBC.
 
+!\[Dashboard Overview](assets/screenshot\_dashboard.png)
 
 
-\## Live Dashboard Features
 
+---
 
 
-\- Interactive Folium map with color-coded restoration sites and clickable popups
 
-\- Tree cover trend lines from 2015 to 2024 per region
+\## The Problem
 
-\- Net gain bar chart showing hectares gained or lost per site
 
-\- Data quality panel with validation scores
 
-\- Regional summary table with start, end, delta, peak, and net gain
+Reforestation programs generate enormous amounts of satellite imagery, but the people running those programs — ecologists, NGO staff, government agencies — have no easy way to see whether their interventions are actually working. Existing GIS tools require specialist knowledge. Spreadsheets lose the spatial context entirely.
 
-\- CSV export to download filtered data
 
 
+This project bridges that gap: a pipeline that takes raw satellite-derived land cover data, validates it, stores it in a spatial database, and serves it through a dashboard that anyone can use.
 
-\## Tech Stack
 
 
+---
 
-\- Language: Python 3.11
 
-\- Geospatial: GeoPandas, Rasterio, Shapely, PyProj
 
-\- Database: PostgreSQL 16 + PostGIS 3.x
+\## What It Tracks
 
-\- ORM: SQLAlchemy, psycopg2
 
-\- Dashboard: Streamlit, Folium, Plotly
 
-\- Version control: Git + GitHub
+5 pilot restoration regions across West and East Africa, 2015–2024:
 
 
 
-\## Key Metrics
+| Region | Country | Biome | Project Type |
 
+|--------|---------|-------|--------------|
 
+| Sahel\_Burkina\_01 | Burkina Faso | Sahel | Reforestation |
 
-\- Pilot regions monitored: 5
+| Kenya\_Rift\_01 | Kenya | Dry Forest | Agroforestry |
 
-\- Years of data: 2015 to 2024
+| Ethiopia\_Highland | Ethiopia | Highland | Natural Regeneration |
 
-\- Total records: 50
+| Ghana\_Volta\_01 | Ghana | Savanna | Reforestation |
 
-\- Data quality score: 97.6%
+| Tanzania\_Usambara | Tanzania | Montane Forest | Reforestation |
 
-\- Validation rules: 7
 
-\- Total tree cover tracked: 332,456 ha
 
-\- Net gain 2015 to 2024: +62,626 ha
+\*\*332,456 ha\*\* of tree cover monitored · \*\*+62,626 ha\*\* net gain · \*\*97.6%\*\* data quality score
 
 
 
-\## Project Structure
+---
 
 
 
-forest\_project/
+\## Dashboard
 
-├── src/
 
-│   ├── create\_demo\_data.py
 
-│   ├── process.py
+!\[Map View](assets/screenshot\_map.png)
 
-│   ├── validate.py
 
-│   ├── load\_db.py
 
-│   └── dashboard.py
+The map shows each restoration site color-coded by current tree cover percentage. Green means above 30%, yellow is 20–30%, orange is 12–20%, red is below 12%. Click any marker for a full breakdown.
 
-├── sql/
 
-│   └── schema.sql
 
-├── data/
+!\[Charts](assets/screenshot\_charts.png)
 
-│   ├── raw/
 
-│   └── processed/
 
-├── requirements.txt
+The time series shows each region's tree cover trajectory from 2015 to 2024. The bar chart shows net hectares gained or lost per site across the selected period.
 
-├── .gitignore
 
-└── README.md
 
+!\[Quality Panel](assets/screenshot\_quality.png)
 
 
-\## Setup
 
+Every record in the database passed through a 7-rule validation pipeline before loading. The quality panel shows per-region scores. The overall score is 97.6% — flagged records are exported to a JSON report, not silently dropped.
 
 
-1\. Clone the repo: git clone https://github.com/HEX027/forest-restoration-dashboard.git
 
-2\. Create environment: conda create -n forest\_env python=3.11 -y
+---
 
-3\. Install geospatial libs: conda install -c conda-forge geopandas rasterio shapely -y
 
-4\. Install rest: pip install -r requirements.txt
 
-5\. Set up PostgreSQL and update DB\_URL in dashboard.py and load\_db.py
-
-6\. Run pipeline: python src/create\_demo\_data.py then process.py then validate.py then load\_db.py
-
-7\. Launch: streamlit run src/dashboard.py
-
-
-
-\## Author
-
-
-
-Amisha Ganvir
-
-GitHub: https://github.com/HEX027
+\## Architecture
 
