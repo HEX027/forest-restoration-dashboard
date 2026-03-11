@@ -2,8 +2,6 @@
 
 A full-stack geospatial platform tracking reforestation across Africa.
 
-> Amisha Ganvir - MPS Data Science, UMBC
-
 ![Dashboard](assets/screenshot_dashboard.png)
 
 ## The Problem
