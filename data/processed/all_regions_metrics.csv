@@ -1,0 +1,51 @@
+region_name,country,project_type,year,tree_cover_pct,tree_cover_ha,tree_cover_ha_change,total_area_ha,data_quality_score,lat,lon
+Sahel_Burkina_01,Burkina Faso,Reforestation,2015,27.67,65535.0,0.0,236850,96.7,12.5,1.8
+Sahel_Burkina_01,Burkina Faso,Reforestation,2016,28.03,66393.0,859.0,236850,95.7,12.5,1.8
+Sahel_Burkina_01,Burkina Faso,Reforestation,2017,28.57,67675.0,1281.0,236850,98.6,12.5,1.8
+Sahel_Burkina_01,Burkina Faso,Reforestation,2018,29.37,69569.0,1894.0,236850,99.7,12.5,1.8
+Sahel_Burkina_01,Burkina Faso,Reforestation,2019,30.18,71483.0,1915.0,236850,95.1,12.5,1.8
+Sahel_Burkina_01,Burkina Faso,Reforestation,2020,30.24,71631.0,148.0,236850,97.0,12.5,1.8
+Sahel_Burkina_01,Burkina Faso,Reforestation,2021,30.88,73132.0,1501.0,236850,98.1,12.5,1.8
+Sahel_Burkina_01,Burkina Faso,Reforestation,2022,31.55,74715.0,1583.0,236850,96.9,12.5,1.8
+Sahel_Burkina_01,Burkina Faso,Reforestation,2023,32.27,76431.0,1715.0,236850,99.3,12.5,1.8
+Sahel_Burkina_01,Burkina Faso,Reforestation,2024,33.15,78506.0,2075.0,236850,98.4,12.5,1.8
+Kenya_Rift_01,Kenya,Agroforestry,2015,24.29,55573.0,0.0,228792,98.4,-0.5,36.2
+Kenya_Rift_01,Kenya,Agroforestry,2016,24.69,56495.0,923.0,228792,97.2,-0.5,36.2
+Kenya_Rift_01,Kenya,Agroforestry,2017,25.21,57672.0,1177.0,228792,95.2,-0.5,36.2
+Kenya_Rift_01,Kenya,Agroforestry,2018,25.3,57894.0,222.0,228792,99.5,-0.5,36.2
+Kenya_Rift_01,Kenya,Agroforestry,2019,26.15,59836.0,1942.0,228792,96.6,-0.5,36.2
+Kenya_Rift_01,Kenya,Agroforestry,2020,26.18,59908.0,72.0,228792,97.6,-0.5,36.2
+Kenya_Rift_01,Kenya,Agroforestry,2021,26.17,59882.0,-26.0,228792,99.8,-0.5,36.2
+Kenya_Rift_01,Kenya,Agroforestry,2022,26.77,61252.0,1370.0,228792,98.9,-0.5,36.2
+Kenya_Rift_01,Kenya,Agroforestry,2023,27.59,63117.0,1865.0,228792,95.4,-0.5,36.2
+Kenya_Rift_01,Kenya,Agroforestry,2024,28.18,64464.0,1346.0,228792,96.0,-0.5,36.2
+Ethiopia_Highland,Ethiopia,Natural Regeneration,2015,17.0,41347.0,0.0,243247,97.9,9.2,38.7
+Ethiopia_Highland,Ethiopia,Natural Regeneration,2016,18.64,45348.0,4001.0,243247,99.8,9.2,38.7
+Ethiopia_Highland,Ethiopia,Natural Regeneration,2017,19.03,46282.0,934.0,243247,96.5,9.2,38.7
+Ethiopia_Highland,Ethiopia,Natural Regeneration,2018,20.3,49387.0,3105.0,243247,95.8,9.2,38.7
+Ethiopia_Highland,Ethiopia,Natural Regeneration,2019,21.27,51748.0,2361.0,243247,97.0,9.2,38.7
+Ethiopia_Highland,Ethiopia,Natural Regeneration,2020,22.15,53883.0,2135.0,243247,96.5,9.2,38.7
+Ethiopia_Highland,Ethiopia,Natural Regeneration,2021,23.51,57192.0,3309.0,243247,98.0,9.2,38.7
+Ethiopia_Highland,Ethiopia,Natural Regeneration,2022,24.77,60255.0,3063.0,243247,99.6,9.2,38.7
+Ethiopia_Highland,Ethiopia,Natural Regeneration,2023,26.02,63302.0,3048.0,243247,99.3,9.2,38.7
+Ethiopia_Highland,Ethiopia,Natural Regeneration,2024,27.11,65940.0,2638.0,243247,97.2,9.2,38.7
+Ghana_Volta_01,Ghana,Reforestation,2015,18.44,42742.0,0.0,231837,98.2,8.0,-1.2
+Ghana_Volta_01,Ghana,Reforestation,2016,19.13,44358.0,1616.0,231837,99.4,8.0,-1.2
+Ghana_Volta_01,Ghana,Reforestation,2017,19.77,45844.0,1486.0,231837,98.6,8.0,-1.2
+Ghana_Volta_01,Ghana,Reforestation,2018,20.8,48223.0,2378.0,231837,98.8,8.0,-1.2
+Ghana_Volta_01,Ghana,Reforestation,2019,21.21,49182.0,959.0,231837,97.6,8.0,-1.2
+Ghana_Volta_01,Ghana,Reforestation,2020,21.26,49298.0,116.0,231837,95.1,8.0,-1.2
+Ghana_Volta_01,Ghana,Reforestation,2021,21.75,50431.0,1133.0,231837,97.5,8.0,-1.2
+Ghana_Volta_01,Ghana,Reforestation,2022,23.23,53847.0,3415.0,231837,99.5,8.0,-1.2
+Ghana_Volta_01,Ghana,Reforestation,2023,24.07,55800.0,1953.0,231837,98.8,8.0,-1.2
+Ghana_Volta_01,Ghana,Reforestation,2024,24.53,56862.0,1062.0,231837,96.1,8.0,-1.2
+Tanzania_Usambara,Tanzania,Reforestation,2015,17.59,47903.0,0.0,272309,96.5,-4.6,38.2
+Tanzania_Usambara,Tanzania,Reforestation,2016,18.88,51425.0,3522.0,272309,95.5,-4.6,38.2
+Tanzania_Usambara,Tanzania,Reforestation,2017,19.23,52355.0,930.0,272309,97.1,-4.6,38.2
+Tanzania_Usambara,Tanzania,Reforestation,2018,20.07,54651.0,2296.0,272309,99.4,-4.6,38.2
+Tanzania_Usambara,Tanzania,Reforestation,2019,20.69,56353.0,1702.0,272309,96.8,-4.6,38.2
+Tanzania_Usambara,Tanzania,Reforestation,2020,21.49,58506.0,2153.0,272309,99.5,-4.6,38.2
+Tanzania_Usambara,Tanzania,Reforestation,2021,22.76,61977.0,3471.0,272309,95.0,-4.6,38.2
+Tanzania_Usambara,Tanzania,Reforestation,2022,23.17,63094.0,1117.0,272309,96.8,-4.6,38.2
+Tanzania_Usambara,Tanzania,Reforestation,2023,23.76,64691.0,1597.0,272309,97.7,-4.6,38.2
+Tanzania_Usambara,Tanzania,Reforestation,2024,24.49,66684.0,1993.0,272309,97.4,-4.6,38.2
