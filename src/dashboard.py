@@ -1,282 +1,482 @@
+"""
+Forest Restoration Monitoring Dashboard
+Streamlit Cloud-ready version — no database required.
+All data is generated synthetically at startup and cached.
+"""
+
 import streamlit as st
 import pandas as pd
+import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import folium
 from streamlit_folium import st_folium
-import plotly.graph_objects as go
-from sqlalchemy import create_engine, text
 import json
+from datetime import datetime
 
-st.set_page_config(page_title="ForestTrack", page_icon="🌿", layout="wide")
+# ─────────────────────────────────────────────
+# PAGE CONFIG
+# ─────────────────────────────────────────────
+st.set_page_config(
+    page_title="Forest Restoration Dashboard",
+    page_icon="🌳",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@600&display=swap');
-html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
-.stApp { background: #0A0F0D; color: #E8EDE9; }
-#MainMenu, footer, header { visibility: hidden; }
-.block-container { padding: 2rem 2.5rem; max-width: 1400px; }
-[data-testid="stSidebar"] { background: #0D1410 !important; border-right: 1px solid #1C2E22; }
-[data-testid="stSidebar"] * { color: #A8BFaC !important; }
-.sidebar-logo { padding: 1.5rem 0 1rem 0; border-bottom: 1px solid #1C2E22; margin-bottom: 1.5rem; }
-.sidebar-logo h2 { font-family: 'Playfair Display', serif !important; font-size: 1.4rem !important; color: #4ADE80 !important; margin: 0 !important; }
-.sidebar-logo p { font-size: 0.7rem !important; color: #4A6550 !important; margin: 0.2rem 0 0 0 !important; text-transform: uppercase; letter-spacing: 0.12em; }
-.sidebar-section { font-size: 0.65rem !important; text-transform: uppercase; letter-spacing: 0.15em; color: #3A5040 !important; margin: 1.5rem 0 0.5rem 0; font-weight: 600; }
-.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
-.kpi-card { background: #0D1410; border: 1px solid #1C2E22; border-radius: 10px; padding: 1.25rem 1.5rem; position: relative; overflow: hidden; }
-.kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #4ADE80, transparent); }
-.kpi-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.12em; color: #4A6550; font-weight: 600; margin-bottom: 0.5rem; }
-.kpi-value { font-family: 'DM Mono', monospace; font-size: 1.8rem; font-weight: 500; color: #E8EDE9; letter-spacing: -0.03em; line-height: 1; }
-.kpi-delta { font-size: 0.72rem; color: #4ADE80; margin-top: 0.4rem; font-family: 'DM Mono', monospace; }
-.kpi-icon { position: absolute; top: 1.25rem; right: 1.25rem; font-size: 1.1rem; opacity: 0.4; }
-.section-header { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.15em; color: #4A6550; font-weight: 600; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 8px; }
-.section-header::after { content: ''; flex: 1; height: 1px; background: #1C2E22; }
-.panel { background: #0D1410; border: 1px solid #1C2E22; border-radius: 10px; padding: 1.25rem; }
-.quality-row { display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid #111A14; }
-.quality-row:last-child { border-bottom: none; }
-.quality-name { font-size: 0.8rem; color: #C8D8CB; font-family: 'DM Mono', monospace; }
-.quality-bar-wrap { flex: 1; margin: 0 1rem; background: #111A14; border-radius: 2px; height: 3px; }
-.quality-bar { height: 100%; background: linear-gradient(90deg, #4ADE80, #22C55E); border-radius: 2px; }
-.quality-score { font-family: 'DM Mono', monospace; font-size: 0.75rem; color: #4ADE80; min-width: 40px; text-align: right; }
-.live-badge { display: inline-flex; align-items: center; gap: 6px; background: #0D2416; border: 1px solid #1A4228; border-radius: 20px; padding: 6px 14px; font-size: 0.7rem; color: #4ADE80; letter-spacing: 0.1em; text-transform: uppercase; }
-.live-dot { width: 6px; height: 6px; background: #4ADE80; border-radius: 50%; animation: pulse 2s infinite; }
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-[data-testid="stDataFrame"] th { background: #111A14 !important; color: #4A6550 !important; font-size: 0.65rem !important; text-transform: uppercase !important; letter-spacing: 0.1em !important; border-bottom: 1px solid #1C2E22 !important; }
-[data-testid="stDataFrame"] td { color: #A8BFaC !important; font-family: 'DM Mono', monospace !important; font-size: 0.78rem !important; border-bottom: 1px solid #111A14 !important; background: transparent !important; }
-[data-testid="stExpander"] { background: #0D1410 !important; border: 1px solid #1C2E22 !important; border-radius: 8px !important; }
-[data-testid="stDownloadButton"] button { background: #111A14 !important; border: 1px solid #1C2E22 !important; color: #4ADE80 !important; font-size: 0.75rem !important; border-radius: 6px !important; }
-hr { border-color: #1C2E22 !important; }
-::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: #0A0F0D; } ::-webkit-scrollbar-thumb { background: #1C2E22; border-radius: 2px; }
+    [data-testid="stAppViewContainer"] { background-color: #F1F8E9; }
+    .main-title { font-size: 2.4rem; font-weight: 800; color: #1B5E20; text-align: center; margin-bottom: 0.2rem; }
+    .sub-title  { font-size: 1rem; color: #4CAF50; text-align: center; margin-bottom: 1.5rem; }
+    .kpi-box {
+        background: linear-gradient(135deg, #2E7D32, #66BB6A);
+        border-radius: 12px; padding: 1.2rem 1rem;
+        color: white; text-align: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .kpi-val   { font-size: 1.9rem; font-weight: 800; }
+    .kpi-lbl   { font-size: 0.82rem; opacity: 0.88; margin-top: 0.2rem; }
+    .kpi-delta { font-size: 0.85rem; margin-top: 0.3rem; }
+    .section-header { font-size: 1.3rem; font-weight: 700; color: #2E7D32;
+                      border-left: 4px solid #4CAF50; padding-left: 0.6rem; margin: 1.2rem 0 0.8rem; }
 </style>
 """, unsafe_allow_html=True)
 
-DB_URL = "postgresql://postgres:Amisha0207!@localhost:5433/forest_restoration"
 
-@st.cache_resource
-def get_engine():
-    return create_engine(DB_URL)
+# ─────────────────────────────────────────────
+# SYNTHETIC DATA GENERATION  (cached)
+# ─────────────────────────────────────────────
+REGIONS = [
+    {"id": "R01", "name": "Amazon Basin North",    "country": "Brazil",       "lat": -3.5,  "lon": -62.0,  "type": "Active Restoration"},
+    {"id": "R02", "name": "Congo Basin West",       "country": "DRC",          "lat": -1.2,  "lon": 21.5,   "type": "Natural Regeneration"},
+    {"id": "R03", "name": "Borneo Lowlands",        "country": "Indonesia",    "lat":  0.5,  "lon": 114.0,  "type": "Agroforestry"},
+    {"id": "R04", "name": "Mekong Highlands",       "country": "Vietnam",      "lat": 14.5,  "lon": 107.8,  "type": "Active Restoration"},
+    {"id": "R05", "name": "Ethiopian Highlands",    "country": "Ethiopia",     "lat":  9.0,  "lon": 38.5,   "type": "Community Forestry"},
+    {"id": "R06", "name": "Atlantic Forest South",  "country": "Brazil",       "lat": -23.0, "lon": -48.5,  "type": "Active Restoration"},
+    {"id": "R07", "name": "Western Ghats",          "country": "India",        "lat": 11.0,  "lon": 76.5,   "type": "Natural Regeneration"},
+    {"id": "R08", "name": "Sumatra Peatlands",      "country": "Indonesia",    "lat":  0.8,  "lon": 102.5,  "type": "Peatland Restoration"},
+    {"id": "R09", "name": "Madagascar East",        "country": "Madagascar",   "lat": -18.5, "lon": 48.5,   "type": "Agroforestry"},
+    {"id": "R10", "name": "Mesoamerica Corridor",   "country": "Guatemala",    "lat": 15.5,  "lon": -90.5,  "type": "Community Forestry"},
+    {"id": "R11", "name": "Himalayan Foothills",    "country": "Nepal",        "lat": 27.5,  "lon": 84.0,   "type": "Active Restoration"},
+    {"id": "R12", "name": "Miombo Woodlands",       "country": "Zambia",       "lat": -13.0, "lon": 28.5,   "type": "Natural Regeneration"},
+    {"id": "R13", "name": "Cerrado Transition",     "country": "Brazil",       "lat": -10.5, "lon": -48.0,  "type": "Active Restoration"},
+    {"id": "R14", "name": "Philippine Mossy Forest","country": "Philippines",  "lat": 10.5,  "lon": 124.5,  "type": "Agroforestry"},
+    {"id": "R15", "name": "Peruvian Cloud Forest",  "country": "Peru",         "lat": -6.5,  "lon": -77.5,  "type": "Natural Regeneration"},
+    {"id": "R16", "name": "Rift Valley Escarpment", "country": "Kenya",        "lat":  0.5,  "lon": 35.5,   "type": "Community Forestry"},
+]
 
-@st.cache_data(ttl=60)
-def load_data():
-    engine = get_engine()
-    with engine.connect() as conn:
-        result = conn.execute(text("""
-            SELECT r.region_name, r.country, r.project_type,
-                   r.lat_center AS lat, r.lon_center AS lon,
-                   r.total_area_ha,
-                   ST_AsGeoJSON(r.geometry) AS geojson,
-                   m.year, m.tree_cover_pct, m.tree_cover_ha,
-                   m.tree_cover_ha_change, m.data_quality_score
-            FROM annual_metrics m
-            JOIN restoration_regions r ON m.region_id = r.id
-            ORDER BY r.region_name, m.year
-        """))
-        df = pd.DataFrame(result.fetchall(), columns=result.keys())
-        for col in ["lat","lon","tree_cover_pct","tree_cover_ha","tree_cover_ha_change","data_quality_score","total_area_ha"]:
-            df[col] = df[col].astype(float)
-        return df
+YEARS = list(range(2015, 2025))
+LAND_CLASSES = ["Tree Cover", "Shrubland", "Grassland", "Cropland", "Urban", "Bare/Sparse", "Water"]
 
-df = load_data()
+np.random.seed(42)
 
+
+@st.cache_data
+def generate_data():
+    rng = np.random.default_rng(42)
+    regions_df = pd.DataFrame(REGIONS)
+
+    # Assign base metrics
+    regions_df["base_area_ha"]        = rng.integers(8_000, 80_000, len(REGIONS))
+    regions_df["base_tree_cover_pct"] = rng.uniform(0.25, 0.72, len(REGIONS))
+    trend_map = {
+        "Active Restoration":  rng.uniform(0.012, 0.030, len(REGIONS)),
+        "Natural Regeneration":rng.uniform(0.006, 0.018, len(REGIONS)),
+        "Agroforestry":        rng.uniform(0.005, 0.015, len(REGIONS)),
+        "Community Forestry":  rng.uniform(0.008, 0.020, len(REGIONS)),
+        "Peatland Restoration":rng.uniform(0.003, 0.010, len(REGIONS)),
+    }
+    regions_df["annual_trend"] = [
+        trend_map[row.type][i] for i, row in regions_df.iterrows()
+    ]
+
+    # Time-series metrics
+    records = []
+    for _, row in regions_df.iterrows():
+        for yr_idx, yr in enumerate(YEARS):
+            noise        = rng.normal(0, 0.004)
+            tree_pct     = min(0.95, row.base_tree_cover_pct + yr_idx * row.annual_trend + noise)
+            tree_ha      = row.base_area_ha * tree_pct
+            shrub_ha     = row.base_area_ha * rng.uniform(0.05, 0.15)
+            grass_ha     = row.base_area_ha * rng.uniform(0.04, 0.12)
+            crop_ha      = row.base_area_ha * rng.uniform(0.03, 0.10)
+            urban_ha     = row.base_area_ha * rng.uniform(0.01, 0.05)
+            bare_ha      = row.base_area_ha * max(0, 1 - tree_pct - 0.30) * rng.uniform(0.5, 1.0)
+            water_ha     = row.base_area_ha * rng.uniform(0.005, 0.03)
+            records.append({
+                "region_id": row.id, "region_name": row["name"],
+                "country": row.country, "project_type": row.type,
+                "year": yr, "total_area_ha": row.base_area_ha,
+                "tree_cover_ha": round(tree_ha, 1),
+                "tree_cover_pct": round(tree_pct * 100, 2),
+                "shrubland_ha": round(shrub_ha, 1),
+                "grassland_ha": round(grass_ha, 1),
+                "cropland_ha": round(crop_ha, 1),
+                "urban_ha": round(urban_ha, 1),
+                "bare_ha": round(bare_ha, 1),
+                "water_ha": round(water_ha, 1),
+            })
+
+    ts_df = pd.DataFrame(records)
+
+    # Year-over-year change
+    ts_df = ts_df.sort_values(["region_id", "year"])
+    ts_df["prev_tree_ha"] = ts_df.groupby("region_id")["tree_cover_ha"].shift(1)
+    ts_df["yoy_change_ha"] = ts_df["tree_cover_ha"] - ts_df["prev_tree_ha"]
+    ts_df["yoy_change_pct"] = (ts_df["yoy_change_ha"] / ts_df["prev_tree_ha"] * 100).round(2)
+
+    # Land-use transitions (2015→2024)
+    transition_records = []
+    lc_pairs = [
+        ("Cropland",    "Tree Cover"),
+        ("Grassland",   "Tree Cover"),
+        ("Bare/Sparse", "Tree Cover"),
+        ("Tree Cover",  "Cropland"),
+        ("Tree Cover",  "Urban"),
+        ("Shrubland",   "Tree Cover"),
+        ("Grassland",   "Cropland"),
+    ]
+    for _, row in regions_df.iterrows():
+        for (fc, tc) in lc_pairs:
+            area = rng.uniform(50, row.base_area_ha * 0.08)
+            transition_records.append({
+                "region_id": row.id, "region_name": row["name"],
+                "country": row.country,
+                "from_class": fc, "to_class": tc,
+                "area_ha": round(area, 1),
+                "period": "2015–2024"
+            })
+    trans_df = pd.DataFrame(transition_records)
+
+    # Carbon estimates (rough: 1 ha tree cover ≈ 100–250 tCO2)
+    ts_df["carbon_tco2"] = (ts_df["tree_cover_ha"] * rng.uniform(100, 250, len(ts_df))).round(0)
+
+    return regions_df, ts_df, trans_df
+
+
+@st.cache_data
+def get_kpis(ts_df):
+    latest = ts_df[ts_df.year == ts_df.year.max()]
+    earliest = ts_df[ts_df.year == ts_df.year.min()]
+    total_tree_now   = latest["tree_cover_ha"].sum()
+    total_tree_start = earliest["tree_cover_ha"].sum()
+    net_change       = total_tree_now - total_tree_start
+    pct_change       = (net_change / total_tree_start) * 100
+    carbon_now       = latest["carbon_tco2"].sum()
+    regions_improved = (latest.set_index("region_id")["tree_cover_ha"] >
+                        earliest.set_index("region_id")["tree_cover_ha"]).sum()
+    return {
+        "total_tree_now":    total_tree_now,
+        "net_change":        net_change,
+        "pct_change":        pct_change,
+        "carbon_stock":      carbon_now,
+        "regions_improved":  int(regions_improved),
+        "total_regions":     len(latest),
+        "countries":         latest["country"].nunique(),
+    }
+
+
+regions_df, ts_df, trans_df = generate_data()
+kpis = get_kpis(ts_df)
+
+# ─────────────────────────────────────────────
+# SIDEBAR FILTERS
+# ─────────────────────────────────────────────
 with st.sidebar:
-    st.markdown('<div class="sidebar-logo"><h2>ForestTrack</h2><p>Restoration Intelligence Platform</p></div>', unsafe_allow_html=True)
-    st.markdown('<p class="sidebar-section">Regions</p>', unsafe_allow_html=True)
-    all_regions = sorted(df["region_name"].unique().tolist())
-    sel_regions = st.multiselect("", all_regions, default=all_regions, label_visibility="collapsed")
-    st.markdown('<p class="sidebar-section">Time Period</p>', unsafe_allow_html=True)
-    year_range = st.slider("", int(df["year"].min()), int(df["year"].max()), (int(df["year"].min()), int(df["year"].max())), label_visibility="collapsed")
-    st.markdown('<p class="sidebar-section">Project Type</p>', unsafe_allow_html=True)
-    all_types = ["All"] + sorted(df["project_type"].unique().tolist())
-    sel_type = st.selectbox("", all_types, label_visibility="collapsed")
+    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Sylvain_Sonnet_Forest.jpg/320px-Sylvain_Sonnet_Forest.jpg",
+             use_column_width=True)
+    st.markdown("## 🌿 Filters")
+
+    all_countries = sorted(ts_df["country"].unique())
+    sel_countries = st.multiselect("Country", all_countries, default=all_countries)
+
+    all_types = sorted(ts_df["project_type"].unique())
+    sel_types = st.multiselect("Project Type", all_types, default=all_types)
+
+    year_range = st.slider("Year Range", 2015, 2024, (2015, 2024))
+
     st.markdown("---")
-    st.markdown('<p class="sidebar-section">Data Sources</p>', unsafe_allow_html=True)
-    st.markdown('<div style="font-size:0.72rem;color:#4A6550;line-height:2;">◦ Global Forest Watch API<br>◦ ESA WorldCover 10m<br>◦ OpenStreetMap Boundaries</div>', unsafe_allow_html=True)
-    st.markdown('<p class="sidebar-section">Stack</p>', unsafe_allow_html=True)
-    st.markdown('<div style="font-size:0.72rem;color:#4A6550;line-height:2;font-family:monospace;">Python · GeoPandas · Rasterio<br>PostgreSQL · PostGIS · Streamlit<br>Folium · Plotly · SQLAlchemy</div>', unsafe_allow_html=True)
+    st.markdown("**About**")
+    st.caption("Tracks tree cover change across 16 pilot restoration regions (2015–2024). "
+               "Data is synthetic and generated for portfolio purposes.")
 
-filtered = df[df["region_name"].isin(sel_regions) & (df["year"] >= year_range[0]) & (df["year"] <= year_range[1])]
-if sel_type != "All":
-    filtered = filtered[filtered["project_type"] == sel_type]
-if filtered.empty:
-    st.error("No data matches selected filters.")
-    st.stop()
+# ─────────────────────────────────────────────
+# FILTER DATA
+# ─────────────────────────────────────────────
+filt = (
+    ts_df["country"].isin(sel_countries) &
+    ts_df["project_type"].isin(sel_types) &
+    ts_df["year"].between(*year_range)
+)
+df = ts_df[filt]
+regions_filt = regions_df[
+    regions_df["country"].isin(sel_countries) &
+    regions_df["type"].isin(sel_types)
+]
 
-latest_year   = filtered["year"].max()
-earliest_year = filtered["year"].min()
-latest        = filtered[filtered["year"] == latest_year]
-earliest      = filtered[filtered["year"] == earliest_year]
-total_ha      = latest["tree_cover_ha"].sum()
-net_gain      = filtered["tree_cover_ha_change"].sum()
-avg_quality   = filtered["data_quality_score"].mean()
-n_regions     = filtered["region_name"].nunique()
-earliest_ha   = earliest["tree_cover_ha"].sum()
-pct_change    = ((total_ha - earliest_ha) / earliest_ha * 100) if earliest_ha > 0 else 0
-gain_sign     = "+" if net_gain >= 0 else ""
-pct_sign      = "+" if pct_change >= 0 else ""
 
-col_title, col_badge = st.columns([4, 1])
-with col_title:
-    st.markdown(f'<p style="font-family:Playfair Display,serif;font-size:2rem;font-weight:600;color:#E8EDE9;letter-spacing:-0.03em;margin:0;">Forest Restoration Monitor</p><p style="font-size:0.8rem;color:#4A6550;margin:0.3rem 0 1.5rem 0;">{len(sel_regions)} active regions · {year_range[0]}–{year_range[1]} · ESA WorldCover + Global Forest Watch</p>', unsafe_allow_html=True)
-with col_badge:
-    st.markdown('<div style="display:flex;justify-content:flex-end;padding-top:0.5rem;"><div class="live-badge"><div class="live-dot"></div>Live Data</div></div>', unsafe_allow_html=True)
+# ─────────────────────────────────────────────
+# HEADER
+# ─────────────────────────────────────────────
+st.markdown('<div class="main-title">🌳 Forest Restoration Monitoring Dashboard</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="sub-title">16 Pilot Regions · {len(sel_countries)} Countries Selected · {year_range[0]}–{year_range[1]}</div>', unsafe_allow_html=True)
 
-st.markdown(f"""
-<div class="kpi-grid">
-  <div class="kpi-card"><div class="kpi-icon">🌲</div><div class="kpi-label">Tree Cover (Latest)</div><div class="kpi-value">{total_ha/1000:.1f}<span style="font-size:1rem;color:#4A6550"> K ha</span></div><div class="kpi-delta">{pct_sign}{pct_change:.1f}% vs {earliest_year}</div></div>
-  <div class="kpi-card"><div class="kpi-icon">📍</div><div class="kpi-label">Regions Monitored</div><div class="kpi-value">{n_regions}<span style="font-size:1rem;color:#4A6550"> sites</span></div><div class="kpi-delta">{year_range[1]-year_range[0]+1} years of data</div></div>
-  <div class="kpi-card"><div class="kpi-icon">📈</div><div class="kpi-label">Net Gain (Period)</div><div class="kpi-value">{gain_sign}{net_gain/1000:.1f}<span style="font-size:1rem;color:#4A6550"> K ha</span></div><div class="kpi-delta">{gain_sign}{net_gain:,.0f} hectares total</div></div>
-  <div class="kpi-card"><div class="kpi-icon">✦</div><div class="kpi-label">Data Quality Score</div><div class="kpi-value">{avg_quality:.1f}<span style="font-size:1rem;color:#4A6550">%</span></div><div class="kpi-delta">7 validation rules · 50 records</div></div>
-</div>
-""", unsafe_allow_html=True)
+# ─────────────────────────────────────────────
+# KPI CARDS
+# ─────────────────────────────────────────────
+c1, c2, c3, c4, c5 = st.columns(5)
+kpi_items = [
+    (c1, f"{kpis['total_tree_now']:,.0f} ha",   "🌲 Current Tree Cover",   ""),
+    (c2, f"{kpis['net_change']:+,.0f} ha",       "📈 Net Change (all years)", f"{'▲' if kpis['net_change']>0 else '▼'} {abs(kpis['pct_change']):.1f}%"),
+    (c3, f"{kpis['carbon_stock']/1e6:.2f} MtCO₂","💨 Est. Carbon Stock",    ""),
+    (c4, f"{kpis['regions_improved']} / {kpis['total_regions']}","✅ Regions Improving",""),
+    (c5, f"{kpis['countries']}",                  "🌍 Countries",            ""),
+]
+for col, val, lbl, delta in kpi_items:
+    with col:
+        st.markdown(f"""
+        <div class="kpi-box">
+            <div class="kpi-val">{val}</div>
+            <div class="kpi-lbl">{lbl}</div>
+            {'<div class="kpi-delta">' + delta + '</div>' if delta else ''}
+        </div>""", unsafe_allow_html=True)
 
-col_map, col_charts = st.columns([1.15, 1], gap="large")
+st.markdown("<br>", unsafe_allow_html=True)
 
-with col_map:
-    st.markdown('<p class="section-header">Spatial Distribution</p>', unsafe_allow_html=True)
+# ─────────────────────────────────────────────
+# ROW 1 : MAP + TREND CHART
+# ─────────────────────────────────────────────
+left, right = st.columns([1.1, 1], gap="medium")
 
-    sw = [filtered["lat"].min() - 3, filtered["lon"].min() - 3]
-    ne = [filtered["lat"].max() + 3, filtered["lon"].max() + 3]
+with left:
+    st.markdown('<div class="section-header">🗺️ Regional Map</div>', unsafe_allow_html=True)
 
-    m = folium.Map(
-        location=[filtered["lat"].mean(), filtered["lon"].mean()],
-        zoom_start=3,
-        tiles="CartoDB dark_matter"
-    )
-    m.fit_bounds([sw, ne])
+    latest_map = df[df.year == df.year.max()].copy()
+    m = folium.Map(location=[5, 20], zoom_start=2, tiles="CartoDB positron")
 
-    def get_color(pct):
-        if pct >= 30:   return "#4ADE80"
-        elif pct >= 20: return "#FCD34D"
-        elif pct >= 12: return "#F97316"
-        else:           return "#F87171"
+    color_map = {
+        "Active Restoration":   "#2E7D32",
+        "Natural Regeneration": "#66BB6A",
+        "Agroforestry":         "#8BC34A",
+        "Community Forestry":   "#FFA726",
+        "Peatland Restoration": "#1565C0",
+    }
 
-    for region_name in sel_regions:
-        rdf = filtered[filtered["region_name"] == region_name]
-        if rdf.empty:
+    for _, row in regions_filt.iterrows():
+        m_row = latest_map[latest_map.region_id == row.id]
+        if m_row.empty:
             continue
-        row   = rdf.loc[rdf["year"].idxmax()]
-        pct   = row["tree_cover_pct"]
-        color = get_color(pct)
-
-        if row["geojson"]:
-            folium.GeoJson(
-                json.loads(row["geojson"]),
-                style_function=lambda x, c=color: {
-                    "fillColor": c, "color": c,
-                    "weight": 1.5, "fillOpacity": 0.2,
-                    "dashArray": "4 4"
-                },
-                tooltip=folium.Tooltip(
-                    f'<div style="font-family:monospace;font-size:12px;background:#0D1410;color:#E8EDE9;padding:8px 12px;border:1px solid #2A5535;border-radius:6px;">'
-                    f'<b style="color:{color}">{region_name}</b><br>'
-                    f'Tree Cover: {pct:.1f}%<br>'
-                    f'Area: {row["tree_cover_ha"]:,.0f} ha<br>'
-                    f'Country: {row["country"]}</div>',
-                    sticky=True
-                )
-            ).add_to(m)
-
+        m_row = m_row.iloc[0]
+        col = color_map.get(row.type, "#888")
         folium.CircleMarker(
-            location=[row["lat"], row["lon"]],
-            radius=10,
-            color=color,
-            fill=True,
-            fill_color=color,
-            fill_opacity=0.9,
-            weight=2,
-            popup=folium.Popup(
-                f'<div style="font-family:monospace;font-size:11px;background:#0D1410;color:#E8EDE9;'
-                f'padding:10px 14px;border:1px solid #2A5535;border-radius:6px;min-width:160px;">'
-                f'<b style="color:{color};font-size:13px">{region_name}</b><br><br>'
-                f'Year: {int(row["year"])}<br>'
-                f'Cover: {pct:.1f}% · {row["tree_cover_ha"]:,.0f} ha<br>'
-                f'Type: {row["project_type"]}<br>'
-                f'Quality: {row["data_quality_score"]:.0f}%</div>',
-                max_width=240
-            )
+            location=[row.lat, row.lon],
+            radius=max(6, min(20, m_row.tree_cover_ha / 2500)),
+            color=col, fill=True, fill_color=col, fill_opacity=0.75,
+            tooltip=folium.Tooltip(f"""
+                <b>{row['name']}</b><br>
+                Country: {row.country}<br>
+                Type: {row.type}<br>
+                Tree Cover: {m_row.tree_cover_ha:,.0f} ha ({m_row.tree_cover_pct:.1f}%)<br>
+                YoY Change: {m_row.yoy_change_ha:+,.0f} ha
+            """),
         ).add_to(m)
 
-    st_folium(m, width=None, height=420, returned_objects=[], use_container_width=True)
-    st.markdown('<div style="display:flex;gap:1.5rem;margin-top:0.6rem;font-size:0.68rem;color:#4A6550;"><span><span style="color:#4ADE80">●</span> >30%</span><span><span style="color:#FCD34D">●</span> 20–30%</span><span><span style="color:#F97316">●</span> 12–20%</span><span><span style="color:#F87171">●</span> &lt;12%</span></div>', unsafe_allow_html=True)
+    # Legend
+    legend_html = """
+    <div style="position:fixed;bottom:20px;left:20px;z-index:1000;background:white;
+         padding:10px 14px;border-radius:8px;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,.25);">
+    <b>Project Type</b><br>
+    """
+    for ptype, col in color_map.items():
+        legend_html += f'<span style="color:{col};font-size:16px">●</span> {ptype}<br>'
+    legend_html += "</div>"
+    m.get_root().html.add_child(folium.Element(legend_html))
 
-with col_charts:
-    st.markdown('<p class="section-header">Tree Cover Trend</p>', unsafe_allow_html=True)
-    palette = ["#4ADE80", "#22D3EE", "#A78BFA", "#FB923C", "#F472B6"]
-    fig1 = go.Figure()
-    for i, region in enumerate(sel_regions):
-        rdf = filtered[filtered["region_name"] == region].sort_values("year")
-        if rdf.empty:
-            continue
-        color = palette[i % len(palette)]
-        fig1.add_trace(go.Scatter(
-            x=rdf["year"], y=rdf["tree_cover_pct"],
-            name=region.replace("_", " "),
-            mode="lines+markers",
-            line=dict(color=color, width=2),
-            marker=dict(color=color, size=5),
-            hovertemplate=f"<b>{region.replace('_',' ')}</b><br>%{{x}}: %{{y:.1f}}%<extra></extra>"
-        ))
-    fig1.update_layout(
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="DM Sans", color="#4A6550", size=11),
-        margin=dict(t=10, b=10, l=0, r=0), height=190,
-        xaxis=dict(showgrid=True, gridcolor="#111A14", color="#4A6550", tickfont=dict(size=10, family="DM Mono"), zeroline=False, showline=False),
-        yaxis=dict(showgrid=True, gridcolor="#111A14", color="#4A6550", tickfont=dict(size=10, family="DM Mono"), ticksuffix="%", zeroline=False, showline=False),
-        legend=dict(orientation="h", y=-0.3, x=0, font=dict(size=9), bgcolor="rgba(0,0,0,0)"),
-        hovermode="x unified"
-    )
-    st.plotly_chart(fig1, use_container_width=True, config={"displayModeBar": False})
+    st_folium(m, width=None, height=420, returned_objects=[])
 
-    st.markdown('<p class="section-header" style="margin-top:0.5rem;">Net Gain by Region</p>', unsafe_allow_html=True)
-    gain_df = filtered.groupby("region_name")["tree_cover_ha_change"].sum().reset_index().sort_values("tree_cover_ha_change", ascending=True)
-    gain_df["short"] = gain_df["region_name"].str.replace("_", " ")
-    gain_df["color"] = gain_df["tree_cover_ha_change"].apply(lambda x: "#4ADE80" if x > 0 else "#F87171")
-    fig2 = go.Figure(go.Bar(
-        x=gain_df["tree_cover_ha_change"], y=gain_df["short"], orientation="h",
-        marker=dict(color=gain_df["color"].tolist(), opacity=0.85, line=dict(width=0)),
-        hovertemplate="<b>%{y}</b><br>%{x:+,.0f} ha<extra></extra>"
+with right:
+    st.markdown('<div class="section-header">📈 Tree Cover Trend</div>', unsafe_allow_html=True)
+
+    trend_agg = df.groupby("year")["tree_cover_ha"].sum().reset_index()
+    fig_trend = go.Figure()
+    fig_trend.add_trace(go.Scatter(
+        x=trend_agg.year, y=trend_agg.tree_cover_ha,
+        mode="lines+markers",
+        line=dict(color="#2E7D32", width=3),
+        marker=dict(size=7),
+        fill="tozeroy", fillcolor="rgba(46,125,50,0.12)",
+        name="Total Tree Cover"
     ))
-    fig2.update_layout(
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="DM Sans", color="#4A6550", size=11),
-        margin=dict(t=5, b=5, l=0, r=0), height=190,
-        xaxis=dict(showgrid=True, gridcolor="#111A14", color="#4A6550", tickfont=dict(size=9, family="DM Mono"), zeroline=True, zerolinecolor="#1C2E22", showline=False),
-        yaxis=dict(color="#A8BFaC", tickfont=dict(size=10), showgrid=False, showline=False),
-        bargap=0.35
+    fig_trend.update_layout(
+        xaxis_title="Year", yaxis_title="Tree Cover (ha)",
+        plot_bgcolor="white", paper_bgcolor="white",
+        height=200, margin=dict(l=10, r=10, t=10, b=30),
+        showlegend=False,
     )
-    st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig_trend, use_container_width=True)
 
-st.markdown("<br>", unsafe_allow_html=True)
-col_q, col_table = st.columns([1, 1.6], gap="large")
+    st.markdown('<div class="section-header">📊 Year-over-Year Change</div>', unsafe_allow_html=True)
+    yoy = df[df.year > year_range[0]].groupby("year")["yoy_change_ha"].sum().reset_index()
+    fig_yoy = px.bar(
+        yoy, x="year", y="yoy_change_ha",
+        color="yoy_change_ha",
+        color_continuous_scale=["#D32F2F", "#FFEB3B", "#2E7D32"],
+        color_continuous_midpoint=0,
+    )
+    fig_yoy.update_layout(
+        xaxis_title="Year", yaxis_title="Change (ha)",
+        coloraxis_showscale=False,
+        plot_bgcolor="white", paper_bgcolor="white",
+        height=185, margin=dict(l=10, r=10, t=10, b=30),
+    )
+    st.plotly_chart(fig_yoy, use_container_width=True)
 
-with col_q:
-    st.markdown('<p class="section-header">Validation Quality</p>', unsafe_allow_html=True)
-    quality_df = filtered.groupby("region_name")["data_quality_score"].mean().reset_index().sort_values("data_quality_score", ascending=False)
-    rows_html = "".join([
-        f'<div class="quality-row"><span class="quality-name">{r["region_name"].replace("_"," ")}</span>'
-        f'<div class="quality-bar-wrap"><div class="quality-bar" style="width:{r["data_quality_score"]}%"></div></div>'
-        f'<span class="quality-score">{r["data_quality_score"]:.1f}</span></div>'
-        for _, r in quality_df.iterrows()
-    ])
-    st.markdown(f'<div class="panel"><div style="font-size:0.65rem;color:#4A6550;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.75rem;">7 rules · {len(filtered)} records · Pipeline output</div>{rows_html}</div>', unsafe_allow_html=True)
+# ─────────────────────────────────────────────
+# ROW 2 : BY-REGION BAR + LAND USE TRANSITION
+# ─────────────────────────────────────────────
+st.markdown('<div class="section-header">🏞️ Tree Cover by Region ({})'.format(df.year.max()) + '</div>', unsafe_allow_html=True)
 
-with col_table:
-    st.markdown('<p class="section-header">Regional Summary</p>', unsafe_allow_html=True)
-    summary = filtered.groupby("region_name").agg(
-        Start_Pct=("tree_cover_pct", "first"),
-        End_Pct=("tree_cover_pct", "last"),
-        Peak_Ha=("tree_cover_ha", "max"),
-        Net_Gain_Ha=("tree_cover_ha_change", "sum"),
-        Country=("country", "first"),
-        Type=("project_type", "first")
-    ).reset_index()
-    summary["Delta"] = (summary["End_Pct"] - summary["Start_Pct"]).round(1).astype(str) + "%"
-    summary["Peak_Ha"] = summary["Peak_Ha"].apply(lambda x: f"{x:,.0f}")
-    summary["Net_Gain_Ha"] = summary["Net_Gain_Ha"].apply(lambda x: f"+{x:,.0f}" if x >= 0 else f"{x:,.0f}")
-    summary = summary.rename(columns={"region_name": "Region", "Start_Pct": "Start %", "End_Pct": "End %", "Peak_Ha": "Peak (ha)", "Net_Gain_Ha": "Net Gain", "Delta": "Δ Cover"})
-    st.dataframe(summary[["Region", "Country", "Type", "Start %", "End %", "Δ Cover", "Net Gain"]], use_container_width=True, hide_index=True, height=220)
+col_a, col_b = st.columns([1.4, 1], gap="medium")
 
-st.markdown("<br>", unsafe_allow_html=True)
-with st.expander("Raw Records Export"):
-    cols = ["region_name", "year", "tree_cover_pct", "tree_cover_ha", "tree_cover_ha_change", "data_quality_score"]
-    st.dataframe(filtered[cols], use_container_width=True, hide_index=True)
-    st.download_button("↓ Export CSV", filtered[cols].to_csv(index=False), "forest_restoration_export.csv", "text/csv")
+with col_a:
+    latest_region = df[df.year == df.year.max()].sort_values("tree_cover_ha", ascending=True)
+    fig_bar = px.bar(
+        latest_region, x="tree_cover_ha", y="region_name",
+        orientation="h",
+        color="project_type",
+        color_discrete_map=color_map,
+        text=latest_region["tree_cover_pct"].apply(lambda x: f"{x:.1f}%"),
+    )
+    fig_bar.update_layout(
+        xaxis_title="Tree Cover (ha)", yaxis_title="",
+        legend_title="Project Type",
+        plot_bgcolor="white", paper_bgcolor="white",
+        height=460, margin=dict(l=10, r=10, t=10, b=30),
+    )
+    st.plotly_chart(fig_bar, use_container_width=True)
+
+with col_b:
+    st.markdown('<div class="section-header">🔄 Land-Use Transitions (2015→2024)</div>', unsafe_allow_html=True)
+    trans_filt = trans_df[trans_df["country"].isin(sel_countries)]
+    # Sankey
+    labels = LAND_CLASSES
+    label_idx = {l: i for i, l in enumerate(labels)}
+    sankey_src, sankey_tgt, sankey_val = [], [], []
+    for _, row in trans_filt.groupby(["from_class", "to_class"])["area_ha"].sum().reset_index().iterrows():
+        if row.from_class in label_idx and row.to_class in label_idx:
+            sankey_src.append(label_idx[row.from_class])
+            sankey_tgt.append(label_idx[row.to_class])
+            sankey_val.append(row.area_ha)
+
+    fig_sankey = go.Figure(go.Sankey(
+        node=dict(
+            pad=12, thickness=16,
+            label=labels,
+            color=["#2E7D32","#8BC34A","#CDDC39","#FFA726","#E64A19","#BDBDBD","#1E88E5"],
+        ),
+        link=dict(source=sankey_src, target=sankey_tgt, value=sankey_val,
+                  color="rgba(46,125,50,0.25)"),
+    ))
+    fig_sankey.update_layout(
+        height=440, margin=dict(l=10, r=10, t=10, b=10),
+        paper_bgcolor="white",
+    )
+    st.plotly_chart(fig_sankey, use_container_width=True)
+
+# ─────────────────────────────────────────────
+# ROW 3 : HEATMAP + PROJECT TYPE BREAKDOWN
+# ─────────────────────────────────────────────
+col_c, col_d = st.columns(2, gap="medium")
+
+with col_c:
+    st.markdown('<div class="section-header">🌡️ Tree Cover % Heatmap</div>', unsafe_allow_html=True)
+    pivot = df.pivot_table(index="region_name", columns="year", values="tree_cover_pct", aggfunc="mean")
+    fig_heat = px.imshow(
+        pivot, color_continuous_scale="Greens",
+        aspect="auto", text_auto=".1f",
+    )
+    fig_heat.update_layout(
+        height=430, margin=dict(l=10, r=10, t=10, b=10),
+        coloraxis_colorbar=dict(title="% Cover"),
+        paper_bgcolor="white",
+    )
+    st.plotly_chart(fig_heat, use_container_width=True)
+
+with col_d:
+    st.markdown('<div class="section-header">🌿 Restoration Type Performance</div>', unsafe_allow_html=True)
+    type_agg = df.groupby(["year", "project_type"])["tree_cover_ha"].sum().reset_index()
+    fig_type = px.line(
+        type_agg, x="year", y="tree_cover_ha",
+        color="project_type",
+        color_discrete_map=color_map,
+        markers=True,
+    )
+    fig_type.update_layout(
+        xaxis_title="Year", yaxis_title="Tree Cover (ha)",
+        legend_title="Type",
+        plot_bgcolor="white", paper_bgcolor="white",
+        height=200, margin=dict(l=10, r=10, t=10, b=30),
+    )
+    st.plotly_chart(fig_type, use_container_width=True)
+
+    # Pie: share by type in latest year
+    type_latest = df[df.year == df.year.max()].groupby("project_type")["tree_cover_ha"].sum().reset_index()
+    fig_pie = px.pie(
+        type_latest, names="project_type", values="tree_cover_ha",
+        color="project_type", color_discrete_map=color_map, hole=0.4,
+    )
+    fig_pie.update_layout(
+        height=200, margin=dict(l=10, r=10, t=10, b=10),
+        showlegend=True,
+        legend=dict(font=dict(size=10)),
+        paper_bgcolor="white",
+    )
+    st.plotly_chart(fig_pie, use_container_width=True)
+
+# ─────────────────────────────────────────────
+# REGIONAL TABLE + EXPORT
+# ─────────────────────────────────────────────
+st.markdown('<div class="section-header">📋 Regional Summary Table</div>', unsafe_allow_html=True)
+
+latest_all  = ts_df[ts_df.year == ts_df.year.max()]
+earliest_all = ts_df[ts_df.year == ts_df.year.min()]
+
+summary = latest_all.merge(
+    earliest_all[["region_id", "tree_cover_ha"]].rename(columns={"tree_cover_ha": "tree_cover_2015"}),
+    on="region_id",
+)
+summary["net_change_ha"]  = summary["tree_cover_ha"] - summary["tree_cover_2015"]
+summary["change_pct"]     = (summary["net_change_ha"] / summary["tree_cover_2015"] * 100).round(1)
+summary["status"] = summary["net_change_ha"].apply(lambda x: "✅ Gaining" if x > 0 else "⚠️ Declining")
+
+display_cols = {
+    "region_name": "Region", "country": "Country",
+    "project_type": "Type", "tree_cover_ha": "Tree Cover (ha)",
+    "tree_cover_pct": "Cover %",
+    "net_change_ha": "Net Change (ha)", "change_pct": "Change %", "status": "Status",
+}
+table_df = summary[list(display_cols)].rename(columns=display_cols)
+table_df["Tree Cover (ha)"] = table_df["Tree Cover (ha)"].map("{:,.0f}".format)
+table_df["Net Change (ha)"] = table_df["Net Change (ha)"].map("{:+,.0f}".format)
+
+st.dataframe(table_df, use_container_width=True, height=320)
+
+csv = summary.to_csv(index=False).encode("utf-8")
+st.download_button(
+    "⬇️ Download Full Data (CSV)", csv,
+    "forest_restoration_summary.csv", "text/csv",
+)
+
+# ─────────────────────────────────────────────
+# FOOTER
+# ─────────────────────────────────────────────
+st.markdown("---")
+st.markdown(
+    "<div style='text-align:center;color:#888;font-size:0.85rem;'>"
+    "Forest Restoration Monitoring Dashboard · Data: 2015–2024 (Synthetic) · "
+    "Built with Streamlit, Plotly & Folium"
+    "</div>",
+    unsafe_allow_html=True,
+)
